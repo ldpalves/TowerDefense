@@ -207,6 +207,12 @@ int width = 800;
 int height = 600;
 
 // Variáveis de movimentação da camera livre
+bool isCursorTopEdge = false;
+bool isCursorBottomEdge = false;
+bool isCursorLeftEdge = false;
+bool isCursorRightEdge = false;
+
+
 bool isWPressed = false;
 bool isSPressed = false;
 bool isAPressed = false;
@@ -514,13 +520,13 @@ int main(int argc, char* argv[])
     float time_previous = glfwGetTime();
 
     float speed = 2.0f;
+    float camera_speed = 4.0f;
     float fall_speed = -10.0f;
     bool colision = false;
 
     VirtualObject sphere(0,"sphere", Matrix_Translate(3.0f,5.0f,0.0f));
     VirtualObject bunny(1,"bunny", Matrix_Translate(0.0f,5.0f,0.0f)*Matrix_Scale(1.0f,1.0f,1.0f));
     VirtualObject plane(2,"plane", Matrix_Scale(5.0f, 1.0f, 5.0f)*Matrix_Translate(0.0f,0.0f,0.0f));
-
     
     virtual_objects.push_back(&sphere);
     virtual_objects.push_back(&bunny);
@@ -576,14 +582,12 @@ int main(int argc, char* argv[])
         glm::vec4 camera_up_vector       = crossproduct(camera_view_vector, camera_right_vector);
 
         //--------------------------------------------------------------
-        //Movimentação Camera Livre quando pressionado w,s,a,d     
-        /*
-        if(isWPressed) camera_position_c += camera_view_vector * speed * glm::vec4(1.0f, 0.0f, 1.0f, 0.0f) * time_delta;
-        if(isSPressed) camera_position_c -= camera_view_vector * speed * glm::vec4(1.0f, 0.0f, 1.0f, 0.0f) * time_delta;
-
-        if(isAPressed) camera_position_c += camera_right_vector * speed * glm::vec4(1.0f, 0.0f, 1.0f, 0.0f) * time_delta;
-        if(isDPressed) camera_position_c -= camera_right_vector * speed * glm::vec4(1.0f, 0.0f, 1.0f, 0.0f) * time_delta;
-        */
+        //Movimentação Camera Livre ao movimentar o cursor nos cantos da tela        
+        if(isCursorTopEdge) camera_position_c += camera_view_vector * glm::vec4(1.0f, 0.0f, 1.0f, 0.0f) * time_delta * camera_speed;
+        if(isCursorBottomEdge) camera_position_c -= camera_view_vector * glm::vec4(1.0f, 0.0f, 1.0f, 0.0f) * time_delta * camera_speed;
+        if(isCursorLeftEdge) camera_position_c += camera_right_vector * glm::vec4(1.0f, 0.0f, 1.0f, 0.0f) * time_delta * camera_speed;
+        if(isCursorRightEdge) camera_position_c -= camera_right_vector * glm::vec4(1.0f, 0.0f, 1.0f, 0.0f) * time_delta * camera_speed;
+        
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
         // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
         glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
@@ -1338,11 +1342,17 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         firstMouse = false;
     }
 
-    float xoffset = xpos - lastX;
-    float yoffset = ypos - lastY;
+    float d_xpos = xpos - lastX;
+    float d_ypos = ypos - lastY;
 
     lastX = xpos;
     lastY = ypos;
+
+    isCursorTopEdge = (ypos <= 50);
+    isCursorBottomEdge = (ypos >= height-50);
+
+    isCursorLeftEdge = (xpos <= 50);
+    isCursorRightEdge = (xpos >= width-50);
     
     ScreenPosToWorldRay(
         lastX, lastY,
@@ -1352,6 +1362,7 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         ray_origin, 
         ray_direction
     );
+
     if (g_LeftMouseButtonPressed)
     {
         // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
