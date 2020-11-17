@@ -74,7 +74,7 @@ struct ObjModel
 
         if (!ret)
             throw std::runtime_error("Erro ao carregar modelo.");
-        
+
         printf("OK.\n");
     }
 };
@@ -212,6 +212,8 @@ bool isCursorBottomEdge = false;
 bool isCursorLeftEdge = false;
 bool isCursorRightEdge = false;
 
+float d_xpos = 0;
+float d_ypos = 0;
 
 bool isWPressed = false;
 bool isSPressed = false;
@@ -253,11 +255,11 @@ void ScreenPosToWorldRay(
 	// The Projection matrix goes from Camera Space to NDC.
 	// So inverse(ProjectionMatrix) goes from NDC to Camera Space.
 	glm::mat4 InverseProjectionMatrix = glm::inverse(ProjectionMatrix);
-	
+
 	// The View Matrix goes from World Space to Camera Space.
 	// So inverse(ViewMatrix) goes from Camera Space to World Space.
 	glm::mat4 InverseViewMatrix = glm::inverse(ViewMatrix);
-	
+
 	glm::vec4 lRayStart_camera = InverseProjectionMatrix * lRayStart_NDC;    lRayStart_camera/=lRayStart_camera.w;
 	glm::vec4 lRayStart_world  = InverseViewMatrix       * lRayStart_camera; lRayStart_world /=lRayStart_world .w;
 	glm::vec4 lRayEnd_camera   = InverseProjectionMatrix * lRayEnd_NDC;      lRayEnd_camera  /=lRayEnd_camera  .w;
@@ -288,9 +290,9 @@ bool TestRayOBBIntersection(
 	glm::mat4 ModelMatrix,       // Transformation applied to the mesh (which will thus be also applied to its bounding box)
 	float& intersection_distance // Output : distance between ray_origin and the intersection with the OBB
 ){
-	
+
 	// Intersection method from Real-Time Rendering and Essential Mathematics for Games
-	
+
 	float tMin = 0.0f;
 	float tMax = 100000.0f;
 
@@ -310,7 +312,7 @@ bool TestRayOBBIntersection(
 			float t2 = (e+aabb_max.x)/f; // Intersection with the "right" plane
 			// t1 and t2 now contain distances betwen ray origin and ray-plane intersections
 
-			// We want t1 to represent the nearest intersection, 
+			// We want t1 to represent the nearest intersection,
 			// so if it's not the case, invert t1 and t2
 			if (t1>t2){
 				float w=t1;t1=t2;t2=w; // swap t1 and t2
@@ -509,12 +511,12 @@ int main(int argc, char* argv[])
     glm::mat4 the_projection;
     glm::mat4 the_model;
     glm::mat4 the_view;
-        
+
     glm::mat4 view;
     glm::mat4 projection;
 
     glm::vec4 camera_position_c = glm:: vec4(-5.0f, 10.0f, 0.0f, 1.0f);
-    
+
     float pi = 3.141592f;
 
     float time_previous = glfwGetTime();
@@ -523,11 +525,14 @@ int main(int argc, char* argv[])
     float camera_speed = 4.0f;
     float fall_speed = -10.0f;
     bool colision = false;
+    bool hold = false;
+    bool release = false;
+    float intersection_distance;
 
     VirtualObject sphere(0,"sphere", Matrix_Translate(3.0f,5.0f,0.0f));
     VirtualObject bunny(1,"bunny", Matrix_Translate(0.0f,5.0f,0.0f)*Matrix_Scale(1.0f,1.0f,1.0f));
     VirtualObject plane(2,"plane", Matrix_Scale(5.0f, 1.0f, 5.0f)*Matrix_Translate(0.0f,0.0f,0.0f));
-    
+
     virtual_objects.push_back(&sphere);
     virtual_objects.push_back(&bunny);
     virtual_objects.push_back(&plane);
@@ -538,7 +543,7 @@ int main(int argc, char* argv[])
         float time_current = glfwGetTime();
         float time_delta = time_current - time_previous;
         time_previous = time_current;
-        
+
         // Aqui executamos as operações de renderização
 
         // Definimos a cor do "fundo" do framebuffer como branco.  Tal cor é
@@ -572,7 +577,7 @@ int main(int argc, char* argv[])
         //glm::vec4 camera_lookat_l    = glm::vec4(0.0f,0.0f,0.0f,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
         //glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
         //glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
-        
+
 
 
         // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
@@ -582,12 +587,12 @@ int main(int argc, char* argv[])
         glm::vec4 camera_up_vector       = crossproduct(camera_view_vector, camera_right_vector);
 
         //--------------------------------------------------------------
-        //Movimentação Camera Livre ao movimentar o cursor nos cantos da tela        
+        //Movimentação Camera Livre ao movimentar o cursor nos cantos da tela
         if(isCursorTopEdge) camera_position_c += camera_view_vector * glm::vec4(1.0f, 0.0f, 1.0f, 0.0f) * time_delta * camera_speed;
         if(isCursorBottomEdge) camera_position_c -= camera_view_vector * glm::vec4(1.0f, 0.0f, 1.0f, 0.0f) * time_delta * camera_speed;
         if(isCursorLeftEdge) camera_position_c += camera_right_vector * glm::vec4(1.0f, 0.0f, 1.0f, 0.0f) * time_delta * camera_speed;
         if(isCursorRightEdge) camera_position_c -= camera_right_vector * glm::vec4(1.0f, 0.0f, 1.0f, 0.0f) * time_delta * camera_speed;
-        
+
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
         // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
         glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
@@ -645,20 +650,37 @@ int main(int argc, char* argv[])
         if(isAPressed) bunny.move(0.0f,0.0f,-movement, virtual_objects);
         if(isDPressed) bunny.move(0.0f,0.0f,movement, virtual_objects);
 
-        float intersection_distance;
-        if (g_LeftMouseButtonPressed && TestRayOBBIntersection(
-            ray_origin, 
-            ray_direction, 
-            bunny.getBBoxMin(), 
-            bunny.getBBoxMax(),
-            bunny.getModel(),
-            intersection_distance)
-        ){
-            //printf("Intersected\n");
-            printf(" %f \n", intersection_distance);
-        };
+        if (g_LeftMouseButtonPressed){
+            if(TestRayOBBIntersection(
+                ray_origin,
+                ray_direction,
+                bunny.getBBoxMin(),
+                bunny.getBBoxMax(),
+                bunny.getModel(),
+                intersection_distance))
+            {
+                if(release) {
+                    bunny.move(0.0,-3.0f,0.0f, virtual_objects);
+                    release = false;
+                }
+                if(!hold && !release) {
+                    bunny.move(0.0,3.0f,0.0f, virtual_objects);
+                    hold = true;
+                    release = true;
+                }
+            }
+            else{
+                if(hold) {
+                    bunny.move(0.0,3.0f,0.0f, virtual_objects);
+                    hold = false;
+                    if(!release) release = true;
+                }
+            }
+        }
+
 
         if(g_LeftMouseButtonPressed) {
+
             //printf("%f < %f", bunny.getZ()+0.5, (g_LastCursorPosX-400)/25);
             //printf(" %f ", bunny.getX());
             if(bunny.getX()+0.5 < g_LastCursorPosX && bunny.getX()-0.5 > g_LastCursorPosX){
@@ -669,7 +691,7 @@ int main(int argc, char* argv[])
         };
 
         //Fall Speed
-        bunny.move(0.0,fall_speed*movement,0.0f, virtual_objects);
+        if(!hold && !release) bunny.move(0.0,fall_speed*movement,0.0f, virtual_objects);
         sphere.move(0.0,fall_speed*movement,0.0f, virtual_objects);
 
         DrawVirtualObject(bunny);
@@ -725,6 +747,7 @@ int main(int argc, char* argv[])
 // Função que carrega uma imagem para ser utilizada como textura
 void LoadTextureImage(const char* filename)
 {
+
     printf("Carregando imagem \"%s\"... ", filename);
 
     // Primeiro fazemos a leitura da imagem do disco
@@ -782,7 +805,7 @@ void DrawVirtualObject(VirtualObject& virtual_object)
     glUniform1i(object_id_uniform, virtual_object.getId());
 
     const char* object_name = virtual_object.getName();
-        
+
     // "Ligamos" o VAO. Informamos que queremos utilizar os atributos de
     // vértices apontados pelo VAO criado pela função BuildTrianglesAndAddToVirtualScene(). Veja
     // comentários detalhados dentro da definição de BuildTrianglesAndAddToVirtualScene().
@@ -792,10 +815,10 @@ void DrawVirtualObject(VirtualObject& virtual_object)
     // com os parâmetros da axis-aligned bounding box (AABB) do modelo.
     glm::vec3 bbox_min = g_VirtualScene[object_name].bbox_min;
     glm::vec3 bbox_max = g_VirtualScene[object_name].bbox_max;
-    
+
     virtual_object.setBBoxMax(bbox_max);
     virtual_object.setBBoxMin(bbox_min);
-    
+
     glUniform4f(bbox_min_uniform, bbox_min.x, bbox_min.y, bbox_min.z, 1.0f);
     glUniform4f(bbox_max_uniform, bbox_max.x, bbox_max.y, bbox_max.z, 1.0f);
 
@@ -845,7 +868,7 @@ void LoadShadersFromFiles()
     // Deletamos o programa de GPU anterior, caso ele exista.
     if ( program_id != 0 )
         glDeleteProgram(program_id);
-    
+
 
     // Criamos um programa de GPU utilizando os shaders carregados acima.
     program_id = CreateGpuProgram(vertex_shader_id, fragment_shader_id);
@@ -1236,7 +1259,7 @@ GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id)
         fprintf(stderr, "%s", output.c_str());
     }
 
-    // Os "Shader Objects" podem ser marcados para deleção após serem linkados 
+    // Os "Shader Objects" podem ser marcados para deleção após serem linkados
     glDeleteShader(vertex_shader_id);
     glDeleteShader(fragment_shader_id);
 
@@ -1280,7 +1303,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
         // g_LeftMouseButtonPressed como true, para saber que o usuário está
         // com o botão esquerdo pressionado.
         glfwGetCursorPos(window, &g_LastCursorPosX, &g_LastCursorPosY);
-        g_LeftMouseButtonPressed = true;        
+        g_LeftMouseButtonPressed = true;
     }
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
     {
@@ -1342,8 +1365,8 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         firstMouse = false;
     }
 
-    float d_xpos = xpos - lastX;
-    float d_ypos = ypos - lastY;
+    d_xpos = xpos - lastX;
+    d_ypos = ypos - lastY;
 
     lastX = xpos;
     lastY = ypos;
@@ -1353,13 +1376,13 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 
     isCursorLeftEdge = (xpos <= 50);
     isCursorRightEdge = (xpos >= width-50);
-    
+
     ScreenPosToWorldRay(
         lastX, lastY,
-        width, height, 
-        allview.getModel(), 
-        allproject.getModel(), 
-        ray_origin, 
+        width, height,
+        allview.getModel(),
+        allproject.getModel(),
+        ray_origin,
         ray_direction
     );
 
@@ -1368,21 +1391,21 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
         float dx = xpos - g_LastCursorPosX;
         float dy = ypos - g_LastCursorPosY;
-    
+
         // Atualizamos parâmetros da câmera com os deslocamentos
         g_CameraTheta -= 0.01f*dx;
         g_CameraPhi   += 0.01f*dy;
-    
+
         // Em coordenadas esféricas, o ângulo phi deve ficar entre -pi/2 e +pi/2.
         float phimax = 3.141592f/2;
         float phimin = -phimax;
-    
+
         if (g_CameraPhi > phimax)
             g_CameraPhi = phimax;
-    
+
         if (g_CameraPhi < phimin)
             g_CameraPhi = phimin;
-    
+
         // Atualizamos as variáveis globais para armazenar a posição atual do
         // cursor como sendo a última posição conhecida do cursor.
         g_LastCursorPosX = xpos;
@@ -1394,11 +1417,11 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
         float dx = xpos - g_LastCursorPosX;
         float dy = ypos - g_LastCursorPosY;
-    
+
         // Atualizamos parâmetros da antebraço com os deslocamentos
         g_ForearmAngleZ -= 0.01f*dx;
         g_ForearmAngleX += 0.01f*dy;
-    
+
         // Atualizamos as variáveis globais para armazenar a posição atual do
         // cursor como sendo a última posição conhecida do cursor.
         g_LastCursorPosX = xpos;
@@ -1410,11 +1433,11 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
         float dx = xpos - g_LastCursorPosX;
         float dy = ypos - g_LastCursorPosY;
-    
+
         // Atualizamos parâmetros da antebraço com os deslocamentos
         g_TorsoPositionX += 0.01f*dx;
         g_TorsoPositionY -= 0.01f*dy;
-    
+
         // Atualizamos as variáveis globais para armazenar a posição atual do
         // cursor como sendo a última posição conhecida do cursor.
         g_LastCursorPosX = xpos;
@@ -1535,7 +1558,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     // Se o usuário apertar a tecla D, a key pressionada vira true, ao soltar, vira false.
     if (key == GLFW_KEY_D && action == GLFW_PRESS) isDPressed = true;
     else if (key == GLFW_KEY_D && action == GLFW_RELEASE) isDPressed = false;
-    
+
     //-------------------------
 }
 
@@ -1662,7 +1685,7 @@ void TextRendering_ShowFramesPerSecond(GLFWwindow* window)
     if ( ellapsed_seconds > 1.0f )
     {
         numchars = snprintf(buffer, 20, "%.2f fps", ellapsed_frames / ellapsed_seconds);
-    
+
         old_seconds = seconds;
         ellapsed_frames = 0;
     }
