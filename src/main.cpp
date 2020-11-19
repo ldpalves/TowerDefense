@@ -475,6 +475,7 @@ int main(int argc, char* argv[])
     // Carregamos duas imagens para serem utilizadas como textura
     LoadTextureImage("../../data/tc-earth_daymap_surface.jpg");      // TextureImage0
     LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif"); // TextureImage1
+    LoadTextureImage("../../data/grass.jpg");      // TextureImage2
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel spheremodel("../../data/sphere.obj");
@@ -489,6 +490,9 @@ int main(int argc, char* argv[])
     ComputeNormals(&planemodel);
     BuildTrianglesAndAddToVirtualScene(&planemodel);
 
+    ObjModel amongusmodel("../../data/amongus.obj");
+    ComputeNormals(&amongusmodel);
+    BuildTrianglesAndAddToVirtualScene(&amongusmodel);
     if ( argc > 1 )
     {
         ObjModel model(argv[1]);
@@ -530,11 +534,13 @@ int main(int argc, char* argv[])
     float intersection_distance;
 
     VirtualObject sphere(0,"sphere", Matrix_Translate(3.0f,5.0f,0.0f));
-    VirtualObject bunny(1,"bunny", Matrix_Translate(0.0f,5.0f,0.0f)*Matrix_Scale(1.0f,1.0f,1.0f));
-    VirtualObject plane(2,"plane", Matrix_Scale(5.0f, 1.0f, 5.0f)*Matrix_Translate(0.0f,0.0f,0.0f));
+    VirtualObject bunny(1,"bunny", Matrix_Scale(1.0f,1.0f,1.0f)*Matrix_Translate(0.0f,5.0f,0.0f));
+    VirtualObject plane(2,"plane", Matrix_Scale(10.0f, 1.0f, 10.0f)*Matrix_Translate(0.0f,0.0f,0.0f));
+    VirtualObject amongus(3,"amongus", Matrix_Translate(0.0f,0.0f,0.0f));
 
     virtual_objects.push_back(&sphere);
     virtual_objects.push_back(&bunny);
+    virtual_objects.push_back(&amongus);
     virtual_objects.push_back(&plane);
 
     // Ficamos em loop, renderizando, até que o usuário feche a janela
@@ -639,6 +645,7 @@ int main(int argc, char* argv[])
         // Desenhamos o modelo da esfera
         DrawVirtualObject(sphere);
 
+
         // Desenhamos o modelo do coelho
         colision = false;
         if(isWPressed || isSPressed || isAPressed || isDPressed) {
@@ -679,17 +686,6 @@ int main(int argc, char* argv[])
         }
 
 
-        if(g_LeftMouseButtonPressed) {
-
-            //printf("%f < %f", bunny.getZ()+0.5, (g_LastCursorPosX-400)/25);
-            //printf(" %f ", bunny.getX());
-            if(bunny.getX()+0.5 < g_LastCursorPosX && bunny.getX()-0.5 > g_LastCursorPosX){
-                if(bunny.getY()+0.5 < g_LastCursorPosY && bunny.getY()-0.5 > g_LastCursorPosY) {
-                    //bunny.move(g_LastCursorPosX,0.0f,g_LastCursorPosY, virtual_objects);
-                };
-            };
-        };
-
         //Fall Speed
         if(!hold && !release) bunny.move(0.0,fall_speed*movement,0.0f, virtual_objects);
         sphere.move(0.0,fall_speed*movement,0.0f, virtual_objects);
@@ -697,6 +693,7 @@ int main(int argc, char* argv[])
         DrawVirtualObject(bunny);
         //printf("Max -> b: %0.2f | g: %0.2f\n", bunny.getBBoxMax().b, bunny.getBBoxMax().g);
         //printf("Min -> b: %0.2f | g: %0.2f\n", bunny.getBBoxMin().b, bunny.getBBoxMin().g);
+        DrawVirtualObject(amongus);
 
         // Desenhamos o plano do chão
         DrawVirtualObject(plane);
